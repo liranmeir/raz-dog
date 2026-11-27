@@ -6,19 +6,10 @@
 import { ContactShadows, useAnimations, useGLTF } from '@react-three/drei';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Box3,
-  CanvasTexture,
-  LoopOnce,
-  LoopRepeat,
-  MathUtils,
-  SRGBColorSpace,
-  Vector3,
-  type Bone,
-  type Group,
-  type Object3D,
-} from 'three';
+import { Box3, LoopOnce, LoopRepeat, MathUtils, Vector3, type Bone, type Group, type Object3D } from 'three';
 import type { DogMood } from '@/components/Dog';
+import { Accessory } from '@/components/dog3d/Accessory';
+import { ToyDog } from '@/components/dog3d/ToyDog';
 import { ONE_SHOT_MOODS, pickClip, pickHeadBoneName } from '@/lib/dog3d/animation-map';
 import { DOG_MODEL } from '@/lib/dog3d/config';
 
@@ -56,7 +47,7 @@ export default function Dog3D(props: Dog3DProps) {
         <directionalLight position={[-3, 2, -2]} intensity={0.5} color="#cfe8ff" />
         <Suspense fallback={null}>
           {hasModel === true && <ModelDog {...props} />}
-          {hasModel === false && <PlaceholderDog {...props} />}
+          {hasModel === false && <ToyDog {...props} />}
         </Suspense>
         <ContactShadows position={[0, 0, 0]} opacity={0.35} scale={4} blur={2.5} far={2} />
       </Canvas>
@@ -68,31 +59,6 @@ function LookAt() {
   const camera = useThree((s) => s.camera);
   useEffect(() => camera.lookAt(CAMERA_TARGET), [camera]);
   return null;
-}
-
-/** Emoji hat/glasses rendered as a sprite inside the 3D scene (no DOM overlay). */
-function Accessory({ accessory, size = 0.5 }: { accessory: Dog3DProps['accessory']; size?: number }) {
-  const texture = useMemo(() => {
-    if (!accessory || typeof document === 'undefined') return null;
-    const c = document.createElement('canvas');
-    c.width = c.height = 256;
-    const ctx = c.getContext('2d');
-    if (!ctx) return null;
-    ctx.font = '200px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(accessory.emoji, 128, 140);
-    const tex = new CanvasTexture(c);
-    tex.colorSpace = SRGBColorSpace;
-    return tex;
-  }, [accessory]);
-  useEffect(() => () => texture?.dispose(), [texture]);
-  if (!texture) return null;
-  return (
-    <sprite scale={[size, size, 1]} renderOrder={10}>
-      <spriteMaterial map={texture} transparent depthTest={false} />
-    </sprite>
-  );
 }
 
 // ---------------------------------------------------------------- GLB model
@@ -183,176 +149,5 @@ function ModelDog({ mood, mouthOpen = 0, accessory, onHeadTap, onBellyTap }: Dog
         <Accessory accessory={accessory} size={fit.height * 0.32} />
       </group>
     </>
-  );
-}
-
-// --------------------------------------------------- built-in placeholder
-
-const FUR = '#EDB06A';
-const FUR_DARK = '#D9944A';
-const EAR = '#8A5A2B';
-const CREAM = '#FFF1DC';
-const INK = '#2E211A';
-
-/** A toy-like dog built from primitives, used until a real model is added. */
-function PlaceholderDog({ mood, mouthOpen = 0, accessory, onHeadTap, onBellyTap }: Dog3DProps) {
-  const dog = useRef<Group>(null);
-  const head = useRef<Group>(null);
-  const tail = useRef<Group>(null);
-  const earL = useRef<Group>(null);
-  const earR = useRef<Group>(null);
-  const eyes = useRef<Group>(null);
-  const jaw = useRef<Group>(null);
-  const blink = useRef({ next: 2, until: 0 });
-  const mouth = useRef(0);
-
-  useFrame((state, dt) => {
-    const t = state.clock.elapsedTime;
-    const d = dog.current;
-    const h = head.current;
-    if (!d || !h) return;
-
-    mouth.current = MathUtils.damp(mouth.current, mood === 'talk' ? mouthOpen : mood === 'eat' ? (Math.sin(t * 14) + 1) * 0.3 : 0, 18, dt);
-    const m = mouth.current;
-
-    // body
-    const jump = mood === 'happy' || mood === 'dance' ? Math.abs(Math.sin(t * 7)) * 0.18 : 0;
-    const bob = mood === 'sleep' ? 0 : Math.sin(t * 2.4) * 0.02;
-    d.position.y = MathUtils.damp(d.position.y, jump + bob, 12, dt);
-    d.rotation.y = MathUtils.damp(d.rotation.y, mood === 'dance' ? Math.sin(t * 5) * 0.5 : 0, 6, dt);
-    d.rotation.z = MathUtils.damp(d.rotation.z, mood === 'giggle' ? Math.sin(t * 30) * 0.06 : 0, 10, dt);
-    const breathe = mood === 'sleep' ? 1 + Math.sin(t * 1.8) * 0.02 : 1;
-    d.scale.set(breathe, breathe * (1 + m * 0.04), breathe);
-
-    // head
-    const tiltZ = mood === 'hmm' ? 0.3 : mood === 'listen' ? -0.18 : 0;
-    const nodX = mood === 'sleep' ? 0.45 : mood === 'eat' ? 0.25 + Math.sin(t * 10) * 0.08 : -m * 0.15;
-    h.rotation.z = MathUtils.damp(h.rotation.z, tiltZ, 8, dt);
-    h.rotation.x = MathUtils.damp(h.rotation.x, nodX, 10, dt);
-
-    if (jaw.current) jaw.current.rotation.x = MathUtils.damp(jaw.current.rotation.x, m * 0.6, 20, dt);
-
-    // tail + ears
-    const wagSpeed = ['happy', 'dance', 'giggle', 'eat'].includes(mood) ? 22 : mood === 'sleep' ? 0 : 5;
-    if (tail.current) tail.current.rotation.z = Math.sin(t * wagSpeed) * (wagSpeed > 10 ? 0.6 : 0.2);
-    const earUp = mood === 'listen' || mood === 'talk' ? 0.5 : 0;
-    if (earL.current) earL.current.rotation.z = MathUtils.damp(earL.current.rotation.z, 0.35 - earUp + Math.sin(t * 2) * 0.04, 8, dt);
-    if (earR.current) earR.current.rotation.z = MathUtils.damp(earR.current.rotation.z, -0.35 + earUp - Math.sin(t * 2) * 0.04, 8, dt);
-
-    // eyes: blink, squint when happy, closed when asleep
-    const b = blink.current;
-    if (t > b.next) {
-      b.until = t + 0.14;
-      b.next = t + 2.5 + Math.random() * 2.5;
-    }
-    const closed = mood === 'sleep' || t < b.until;
-    const happy = mood === 'happy' || mood === 'giggle' || mood === 'dance';
-    if (eyes.current) eyes.current.scale.y = MathUtils.damp(eyes.current.scale.y, closed ? 0.1 : happy ? 0.35 : 1, 25, dt);
-  });
-
-  const headTap = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    onHeadTap?.();
-  };
-  const bellyTap = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    onBellyTap?.();
-  };
-
-  return (
-    <group ref={dog}>
-      {/* body */}
-      <group onPointerDown={bellyTap}>
-        <mesh position={[0, 0.5, -0.05]} scale={[0.5, 0.45, 0.62]}>
-          <sphereGeometry args={[1, 32, 32]} />
-          <meshStandardMaterial color={FUR} roughness={0.8} />
-        </mesh>
-        <mesh position={[0, 0.45, 0.33]} scale={[0.32, 0.3, 0.25]}>
-          <sphereGeometry args={[1, 32, 32]} />
-          <meshStandardMaterial color={CREAM} roughness={0.9} />
-        </mesh>
-        {[
-          [-0.25, 0.32],
-          [0.25, 0.32],
-          [-0.25, -0.4],
-          [0.25, -0.4],
-        ].map(([x, z], i) => (
-          <mesh key={i} position={[x, 0.11, z]} scale={[0.13, 0.12, 0.15]}>
-            <sphereGeometry args={[1, 20, 20]} />
-            <meshStandardMaterial color={FUR_DARK} roughness={0.8} />
-          </mesh>
-        ))}
-        <group ref={tail} position={[0, 0.72, -0.6]}>
-          <mesh position={[0, 0.15, -0.05]} rotation={[-0.5, 0, 0]} scale={[0.07, 0.22, 0.07]}>
-            <sphereGeometry args={[1, 16, 16]} />
-            <meshStandardMaterial color={FUR_DARK} roughness={0.8} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* head */}
-      <group ref={head} position={[0, 1.05, 0.2]} onPointerDown={headTap}>
-        <mesh>
-          <sphereGeometry args={[0.44, 40, 40]} />
-          <meshStandardMaterial color={FUR} roughness={0.75} />
-        </mesh>
-        <group ref={earL} position={[-0.36, 0.18, -0.02]} rotation={[0, 0, 0.35]}>
-          <mesh position={[-0.04, -0.2, 0]} scale={[0.12, 0.28, 0.07]}>
-            <sphereGeometry args={[1, 20, 20]} />
-            <meshStandardMaterial color={EAR} roughness={0.85} />
-          </mesh>
-        </group>
-        <group ref={earR} position={[0.36, 0.18, -0.02]} rotation={[0, 0, -0.35]}>
-          <mesh position={[0.04, -0.2, 0]} scale={[0.12, 0.28, 0.07]}>
-            <sphereGeometry args={[1, 20, 20]} />
-            <meshStandardMaterial color={EAR} roughness={0.85} />
-          </mesh>
-        </group>
-        {/* cheeks */}
-        {[-0.27, 0.27].map((x) => (
-          <mesh key={x} position={[x, -0.1, 0.33]} scale={[0.08, 0.06, 0.03]}>
-            <sphereGeometry args={[1, 16, 16]} />
-            <meshStandardMaterial color="#F59AA0" transparent opacity={0.55} />
-          </mesh>
-        ))}
-        {/* eyes */}
-        <group ref={eyes} position={[0, 0.08, 0.36]}>
-          {[-0.15, 0.15].map((x) => (
-            <group key={x} position={[x, 0, 0]}>
-              <mesh>
-                <sphereGeometry args={[0.075, 24, 24]} />
-                <meshStandardMaterial color={INK} roughness={0.2} />
-              </mesh>
-              <mesh position={[0.025, 0.03, 0.06]}>
-                <sphereGeometry args={[0.022, 12, 12]} />
-                <meshBasicMaterial color="#ffffff" />
-              </mesh>
-            </group>
-          ))}
-        </group>
-        {/* muzzle + nose + jaw */}
-        <mesh position={[0, -0.12, 0.33]} scale={[0.22, 0.16, 0.16]}>
-          <sphereGeometry args={[1, 28, 28]} />
-          <meshStandardMaterial color={CREAM} roughness={0.85} />
-        </mesh>
-        <mesh position={[0, -0.05, 0.49]} scale={[0.07, 0.05, 0.05]}>
-          <sphereGeometry args={[1, 20, 20]} />
-          <meshStandardMaterial color={INK} roughness={0.3} />
-        </mesh>
-        <group ref={jaw} position={[0, -0.2, 0.36]}>
-          <mesh position={[0, -0.03, 0.06]} scale={[0.12, 0.05, 0.08]}>
-            <sphereGeometry args={[1, 20, 20]} />
-            <meshStandardMaterial color="#6B2D2D" roughness={0.6} />
-          </mesh>
-          <mesh position={[0, -0.04, 0.1]} scale={[0.07, 0.025, 0.06]}>
-            <sphereGeometry args={[1, 16, 16]} />
-            <meshStandardMaterial color="#F07F8A" roughness={0.6} />
-          </mesh>
-        </group>
-        <group position={accessory?.slot === 'face' ? [0, 0.08, 0.5] : [0, 0.48, 0.05]}>
-          <Accessory accessory={accessory} size={accessory?.slot === 'face' ? 0.55 : 0.5} />
-        </group>
-      </group>
-    </group>
   );
 }
