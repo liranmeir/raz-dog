@@ -291,35 +291,55 @@ function Ear({ level, active }: { level: number; active: boolean }) {
   );
 }
 
-/** Hidden-ish parent entry: hold for 2 seconds to open the parent area. */
+/**
+ * Hidden-ish parent entry: hold for 1.5 s, or tap 5 times within 3 s.
+ * Pointer capture keeps a long press from being cancelled when the finger
+ * drifts, and pointercancel (fired by mobile browsers on long-press) is not
+ * treated as lifting the finger.
+ */
 function ParentGear() {
   const router = useRouter();
-  const t = useRef<number | null>(null);
+  const timer = useRef<number | null>(null);
+  const taps = useRef<number[]>([]);
   const [holding, setHolding] = useState(false);
-  const start = () => {
-    setHolding(true);
-    t.current = window.setTimeout(() => router.push('/parent'), 2000);
-  };
-  const cancel = () => {
+
+  const open = () => {
+    if (timer.current) window.clearTimeout(timer.current);
     setHolding(false);
-    if (t.current) window.clearTimeout(t.current);
+    router.push('/parent');
   };
+
+  const down = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setHolding(true);
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(open, 1500);
+    const now = Date.now();
+    taps.current = [...taps.current.filter((t) => now - t < 3000), now];
+    if (taps.current.length >= 5) open();
+  };
+
+  const up = () => {
+    setHolding(false);
+    if (timer.current) window.clearTimeout(timer.current);
+  };
+
   return (
     <button
-      onPointerDown={start}
-      onPointerUp={cancel}
-      onPointerLeave={cancel}
+      onPointerDown={down}
+      onPointerUp={up}
       onContextMenu={(e) => e.preventDefault()}
-      className="absolute bottom-3 right-3 z-20 h-12 w-12 rounded-full text-2xl opacity-30"
-      aria-label="אזור הורים (לחיצה ארוכה)"
+      style={{ touchAction: 'none' }}
+      className="absolute bottom-2 right-2 z-30 flex h-16 w-16 items-center justify-center rounded-full text-2xl opacity-40"
+      aria-label="אזור הורים (לחיצה ארוכה או 5 הקשות)"
     >
       <AnimatePresence>
         {holding && (
           <motion.span
-            className="absolute inset-0 rounded-full border-4 border-slate-500"
+            className="absolute inset-1 rounded-full border-4 border-slate-500"
             initial={{ scale: 0.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 2 }}
+            transition={{ duration: 1.5 }}
           />
         )}
       </AnimatePresence>
