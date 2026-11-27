@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+/// One row per child playing (today only "raz").
+model Player {
+  id        String      @id
+  name      String
+  stars     Int         @default(0)
+  owned     String[]    @default([])
+  equipped  String?
+  updatedAt DateTime    @updatedAt
+  createdAt DateTime    @default(now())
+  events    GameEvent[]
+}
+
+/// Parent-controlled settings, one row per player.
+model Settings {
+  playerId       String   @id
+  volume         Float    @default(0.6)
+  micSensitivity Float    @default(0.5)
+  feedOptions    Int      @default(2)
+  speakNames     Boolean  @default(true)
+  echoEnabled    Boolean  @default(true)
+  sessionMinutes Int      @default(20)
+  updatedAt      DateTime @updatedAt
+}
+
+/// Progress log: what happened in which game.
+/// kind: "vocalize" | "success" | "miss" | "purchase" | "round_complete"
+model GameEvent {
+  id        String   @id @default(cuid())
+  playerId  String
+  game      String
+  kind      String
+  detail    String?
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, createdAt])
+}
