@@ -39,9 +39,19 @@ flowchart LR
 - **Echo** (`lib/audio/echo.ts`): Web Audio ScriptProcessor feeds an energy-based voice-activity detector (`lib/audio/vad.ts`, a pure function with unit tests). The captured clip is played back at 1.5× speed. Mic input is ignored during playback so the dog never repeats itself.
 - **Dog** (`components/Dog.tsx`): an original SVG character animated with Framer Motion, with moods `idle / listen / talk / happy / giggle / eat / hmm / dance / sleep`.
 
+## 3D dog
+
+The parent area has a **Dog style** setting (2D / 3D). In 3D mode, `components/Dog3D.tsx` (React Three Fiber) loads `public/models/dog.glb`. If that file is missing, it shows a built-in toy dog made of primitives.
+
+- **Animations:** each mood is mapped to a clip by keyword (`lib/dog3d/animation-map.ts`), so clip names like `Armature|Idle` or `jump_01` work as-is.
+- **Talking:** done procedurally, with a head-bone nod plus a body squash driven by the playback level. AI-generated rigs usually have no jaw bone.
+- **Hats:** emoji sprites that follow the head bone.
+- **Orientation and size:** set in `lib/dog3d/config.ts`.
+- **Loading:** three.js loads only when 3D is selected (`next/dynamic`).
+
 ## Stack
 
-Next.js (App Router) · TypeScript · Tailwind v4 · Framer Motion · Prisma 5.22.0 · Neon Postgres · Vitest · Vercel.
+Next.js (App Router) · TypeScript · Tailwind v4 · Framer Motion · React Three Fiber · Prisma 5.22.0 · Neon Postgres · Vitest · Vercel.
 
 ```bash
 pnpm install

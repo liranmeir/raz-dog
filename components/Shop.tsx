@@ -2,7 +2,8 @@
 
 import { motion } from 'framer-motion';
 import { useRef, useState } from 'react';
-import { Dog, type DogMood } from '@/components/Dog';
+import { type DogMood } from '@/components/Dog';
+import { DogView } from '@/components/DogView';
 import type { AudioKit } from '@/components/GameApp';
 import { SHOP_ITEMS, type ShopItem } from '@/lib/game/catalog';
 import type { PlayerState } from '@/lib/game/state';
@@ -45,7 +46,7 @@ export function Shop({ audio, player, accessory, onBuy, onEquip }: Props) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-between pb-6">
-      <Dog mood={mood} accessory={accessory} className="h-[38dvh] max-w-[70vw]" />
+      <DogView mood={mood} accessory={accessory} className="h-[38dvh] max-w-[70vw]" />
       <div className="grid grid-cols-4 gap-4 px-4">
         {SHOP_ITEMS.map((item) => {
           const owned = player.owned.includes(item.id);

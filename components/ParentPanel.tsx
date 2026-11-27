@@ -90,6 +90,17 @@ export function ParentPanel({ initialSettings, stars, summary, loadError }: Prop
           onChange={(v) => set('micSensitivity', v)}
         />
         <label className="flex items-center justify-between">
+          סגנון הכלב
+          <select
+            className="rounded border px-2 py-1"
+            value={s.dogStyle}
+            onChange={(e) => set('dogStyle', e.target.value === '3d' ? '3d' : '2d')}
+          >
+            <option value="2d">דו-ממד</option>
+            <option value="3d">תלת-ממד</option>
+          </select>
+        </label>
+        <label className="flex items-center justify-between">
           הכלב חוזר על קולות
           <input type="checkbox" className="h-5 w-5" checked={s.echoEnabled} onChange={(e) => set('echoEnabled', e.target.checked)} />
         </label>

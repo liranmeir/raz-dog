@@ -2,7 +2,8 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Dog, type DogMood } from '@/components/Dog';
+import { type DogMood } from '@/components/Dog';
+import { DogView } from '@/components/DogView';
 import type { AudioKit } from '@/components/GameApp';
 import { speakHebrew } from '@/lib/audio/sfx';
 import { FOODS, type Food } from '@/lib/game/catalog';
@@ -105,7 +106,7 @@ export function FeedGame({ audio, settings, accessory, onSuccess, onMiss, onComp
 
       <div className="relative flex items-center justify-center">
         <div ref={dogRef}>
-          <Dog mood={mood} accessory={accessory} className="h-[40dvh] max-w-[70vw]" />
+          <DogView mood={mood} accessory={accessory} className="h-[40dvh] max-w-[70vw]" />
         </div>
         {!done && (
           <motion.div

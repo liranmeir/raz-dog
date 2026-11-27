@@ -3,7 +3,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Dog, type DogMood } from '@/components/Dog';
+import { type DogMood } from '@/components/Dog';
+import { DogStyleContext, DogView } from '@/components/DogView';
 import { FeedGame } from '@/components/FeedGame';
 import { Shop } from '@/components/Shop';
 import { EchoEngine } from '@/lib/audio/echo';
@@ -86,7 +87,8 @@ export function GameApp() {
   }, [screen, settings.sessionMinutes, goSleep]);
 
   async function begin() {
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const Ctx =
+      window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new Ctx();
     await ctx.resume();
     const out = ctx.createGain();
@@ -150,86 +152,82 @@ export function GameApp() {
   }
 
   return (
-    <main className="relative flex h-dvh w-full select-none flex-col overflow-hidden bg-gradient-to-b from-sky-100 to-amber-50">
-      {screen !== 'start' && screen !== 'sleep' && (
-        <TopBar stars={player.stars} burst={starBurst} onHome={screen !== 'home' ? goHome : undefined} />
-      )}
-      <ParentGear />
+    <DogStyleContext.Provider value={settings.dogStyle}>
+      <main className="relative flex h-dvh w-full select-none flex-col overflow-hidden bg-gradient-to-b from-sky-100 to-amber-50">
+        {screen !== 'start' && screen !== 'sleep' && (
+          <TopBar stars={player.stars} burst={starBurst} onHome={screen !== 'home' ? goHome : undefined} />
+        )}
+        <ParentGear />
 
-      {screen === 'start' && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6">
-          <Dog mood="idle" accessory={accessory} className="h-[55dvh] max-w-[90vw]" />
-          <motion.button
-            onClick={begin}
-            disabled={!store.loaded}
-            className="flex h-28 w-28 items-center justify-center rounded-full bg-emerald-400 text-6xl shadow-lg disabled:opacity-40"
-            animate={{ scale: [1, 1.08, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity }}
-            aria-label="בוא נשחק"
-          >
-            ▶
-          </motion.button>
-        </div>
-      )}
-
-      {screen === 'home' && (
-        <div className="flex flex-1 flex-col items-center justify-between pb-6">
-          <div className="relative flex flex-1 items-center justify-center">
-            <Dog
-              mood={mood}
-              mouthOpen={mouth}
-              accessory={accessory}
-              onHeadTap={tapHead}
-              onBellyTap={tapBelly}
-              className="h-[58dvh] max-w-[92vw]"
-            />
-            {settings.echoEnabled && micOk && <Ear level={micLevel} active={mood === 'listen' || mood === 'talk'} />}
+        {screen === 'start' && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-6">
+            <DogView mood="idle" accessory={accessory} className="h-[55dvh] max-w-[90vw]" />
+            <motion.button
+              onClick={begin}
+              disabled={!store.loaded}
+              className="flex h-28 w-28 items-center justify-center rounded-full bg-emerald-400 text-6xl shadow-lg disabled:opacity-40"
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ duration: 1.8, repeat: Infinity }}
+              aria-label="בוא נשחק"
+            >
+              ▶
+            </motion.button>
           </div>
-          <div className="flex gap-8">
-            <BigButton emoji="🍖" label="להאכיל" color="bg-orange-300" onClick={() => setScreen('feed')} />
-            <BigButton emoji="🛍️" label="חנות" color="bg-violet-300" onClick={() => setScreen('shop')} />
+        )}
+
+        {screen === 'home' && (
+          <div className="flex flex-1 flex-col items-center justify-between pb-6">
+            <div className="relative flex flex-1 items-center justify-center">
+              <DogView
+                mood={mood}
+                mouthOpen={mouth}
+                accessory={accessory}
+                onHeadTap={tapHead}
+                onBellyTap={tapBelly}
+                className="h-[58dvh] max-w-[92vw]"
+              />
+              {settings.echoEnabled && micOk && <Ear level={micLevel} active={mood === 'listen' || mood === 'talk'} />}
+            </div>
+            <div className="flex gap-8">
+              <BigButton emoji="🍖" label="להאכיל" color="bg-orange-300" onClick={() => setScreen('feed')} />
+              <BigButton emoji="🛍️" label="חנות" color="bg-violet-300" onClick={() => setScreen('shop')} />
+            </div>
+            {micOk === false && (
+              <p className="mt-2 text-sm text-slate-500">אין גישה למיקרופון — הכלב לא יחזור על קולות</p>
+            )}
           </div>
-          {micOk === false && (
-            <p className="mt-2 text-sm text-slate-500">אין גישה למיקרופון — הכלב לא יחזור על קולות</p>
-          )}
-        </div>
-      )}
+        )}
 
-      {screen === 'feed' && kit && (
-        <FeedGame
-          audio={kit}
-          settings={settings}
-          accessory={accessory}
-          onSuccess={(foodId) => {
-            store.award(1, 'feed', 'success', foodId);
-            showStar();
-          }}
-          onMiss={(foodId) => store.log('feed', 'miss', foodId)}
-          onComplete={() => {
-            store.award(3, 'feed', 'round_complete');
-            showStar();
-          }}
-          onExit={goHome}
-        />
-      )}
+        {screen === 'feed' && kit && (
+          <FeedGame
+            audio={kit}
+            settings={settings}
+            accessory={accessory}
+            onSuccess={(foodId) => {
+              store.award(1, 'feed', 'success', foodId);
+              showStar();
+            }}
+            onMiss={(foodId) => store.log('feed', 'miss', foodId)}
+            onComplete={() => {
+              store.award(3, 'feed', 'round_complete');
+              showStar();
+            }}
+            onExit={goHome}
+          />
+        )}
 
-      {screen === 'shop' && kit && (
-        <Shop
-          audio={kit}
-          player={player}
-          accessory={accessory}
-          onBuy={store.buy}
-          onEquip={store.equip}
-        />
-      )}
+        {screen === 'shop' && kit && (
+          <Shop audio={kit} player={player} accessory={accessory} onBuy={store.buy} onEquip={store.equip} />
+        )}
 
-      {screen === 'sleep' && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-indigo-950/80">
-          <Dog mood="sleep" accessory={accessory} className="h-[60dvh] max-w-[90vw]" />
-          <p className="text-4xl text-indigo-100">לילה טוב 👋</p>
-        </div>
-      )}
-    </main>
+        {screen === 'sleep' && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-indigo-950/80">
+            <DogView mood="sleep" accessory={accessory} className="h-[60dvh] max-w-[90vw]" />
+            <p className="text-4xl text-indigo-100">לילה טוב 👋</p>
+          </div>
+        )}
+      </main>
+    </DogStyleContext.Provider>
   );
 }
 
@@ -257,7 +255,17 @@ function TopBar({ stars, burst, onHome }: { stars: number; burst: number; onHome
   );
 }
 
-function BigButton({ emoji, label, color, onClick }: { emoji: string; label: string; color: string; onClick: () => void }) {
+function BigButton({
+  emoji,
+  label,
+  color,
+  onClick,
+}: {
+  emoji: string;
+  label: string;
+  color: string;
+  onClick: () => void;
+}) {
   return (
     <motion.button
       whileTap={{ scale: 0.9 }}

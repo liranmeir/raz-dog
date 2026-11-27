@@ -29,6 +29,7 @@ model Settings {
   speakNames     Boolean  @default(true)
   echoEnabled    Boolean  @default(true)
   sessionMinutes Int      @default(20)
+  dogStyle       String   @default("2d")
   updatedAt      DateTime @updatedAt
 }
 

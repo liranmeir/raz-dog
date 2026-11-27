@@ -15,7 +15,10 @@ export const settingsSchema = z.object({
   echoEnabled: z.boolean(),
   /** 0 = no limit */
   sessionMinutes: z.number().int().min(0).max(120),
+  dogStyle: z.enum(['2d', '3d']),
 });
+
+export type DogStyle = '2d' | '3d';
 
 export type GameSettings = z.infer<typeof settingsSchema>;
 
@@ -26,6 +29,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   speakNames: true,
   echoEnabled: true,
   sessionMinutes: 20,
+  dogStyle: '2d',
 };
 
 export const playerStateSchema = z.object({
