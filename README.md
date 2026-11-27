@@ -28,72 +28,32 @@ The **games are open** and need no login, because a 7-year-old shouldn't hit a p
 
 ## Architecture
 
-![Architecture](docs/architecture-logos.svg)
+![Architecture](docs/architecture-logos.png)
 
 <details>
-<summary>Detailed / editable version (Mermaid)</summary>
+<summary>Detailed version</summary>
 
-```mermaid
-flowchart LR
-  subgraph Tablet["iPad (home-screen PWA)"]
-    UI["Game UI<br/>React + Framer Motion"]
-    Dog3D["3D puppy<br/>React Three Fiber"]
-    Echo["Voice echo<br/>Web Audio + VAD"]
-    Cache[("localStorage<br/>player + pending events")]
-    UI -->|mood, voice level| Dog3D
-    Echo -->|playback level| UI
-    UI <--> Cache
-  end
-  subgraph Vercel["Vercel · raz-dog.liranmeir.com"]
-    Actions["Server Actions<br/>game-actions / parent-actions"]
-    Gate["middleware + parent-guard<br/>SITE_PASSWORD (fails closed)"]
-  end
-  DB[("Neon Postgres<br/>Player · Settings · GameEvent")]
-  GH["GitHub liranmeir/raz-dog"]
-  UI <-->|saveProgress / getGameState| Actions
-  Gate --> Actions
-  Actions <-->|Prisma| DB
-  GH -->|push to main, tested build, deploy| Vercel
-```
+![Detailed architecture](docs/architecture.png)
+
+Source: [`docs/architecture.mmd`](docs/architecture.mmd)
 
 </details>
 
 ### Key flows
 
+The diagrams are rendered to PNG so they show up everywhere, including the GitHub mobile app, which doesn't render Mermaid. The `.mmd` files are the editable sources. Re-render them with `npx @mermaid-js/mermaid-cli -i docs/X.mmd -o docs/X.png -s 2`.
+
 **Raz makes a sound → the dog repeats it** (all on-device, nothing leaves the tablet):
 
-```mermaid
-sequenceDiagram
-  participant R as Raz
-  participant M as Mic (Web Audio)
-  participant V as VAD (lib/audio/vad.ts)
-  participant D as Dog
-  participant S as Store (local-first)
-  R->>M: any vocal sound
-  M->>V: 2048-sample frames (RMS)
-  V-->>D: start → mood "listen" (ears up)
-  V-->>M: end (≥250 ms voiced)
-  M->>D: play clip at 1.5× → mood "talk", mouth follows level
-  D->>S: +1 ⭐ (max once per 4 s), log "vocalize"
-  S-->>S: cached instantly in localStorage
-```
+![Voice echo flow](docs/flow-voice-echo.png)
+
+Source: [`docs/flow-voice-echo.mmd`](docs/flow-voice-echo.mmd)
 
 **Progress sync and parent settings:**
 
-```mermaid
-sequenceDiagram
-  participant T as Tablet
-  participant A as Server Actions
-  participant DB as Neon
-  participant P as Parent (/parent)
-  T->>A: getGameState() on launch
-  A->>DB: upsert Player, read Settings
-  A-->>T: player + settings (server wins unless unsynced local progress)
-  T->>A: saveProgress(state, events) ~2.5 s after a change / on background
-  A->>DB: update Player + insert GameEvents (one transaction)
-  P->>A: updateSettings() (password cookie checked server-side)
-  A->>DB: upsert Settings → applied on the tablet's next launch
-```
+![Sync and settings flow](docs/flow-sync-settings.png)
+
+Source: [`docs/flow-sync-settings.mmd`](docs/flow-sync-settings.mmd)
 
 - **Local-first.** Every star or purchase is applied and cached on the device immediately, then synced in the background with `saveProgress`. The game never waits on the network. Unsynced events survive reloads.
 - **Echo** (`lib/audio/echo.ts`): Web Audio ScriptProcessor feeds an energy-based voice-activity detector (`lib/audio/vad.ts`, a pure function with unit tests). The captured clip is played back at 1.5× speed. Mic input is ignored during playback so the dog never repeats itself.

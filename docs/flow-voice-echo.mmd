@@ -1,0 +1,13 @@
+sequenceDiagram
+  participant R as Raz
+  participant M as Mic (Web Audio)
+  participant V as VAD (lib/audio/vad.ts)
+  participant D as Dog
+  participant S as Store (local-first)
+  R->>M: any vocal sound
+  M->>V: 2048-sample frames (RMS)
+  V-->>D: start → mood "listen" (ears up)
+  V-->>M: end (≥250 ms voiced)
+  M->>D: play clip at 1.5× → mood "talk", mouth follows level
+  D->>S: +1 ⭐ (max once per 4 s), log "vocalize"
+  S-->>S: cached instantly in localStorage

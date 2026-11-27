@@ -1,0 +1,12 @@
+sequenceDiagram
+  participant T as Tablet
+  participant A as Server Actions
+  participant DB as Neon
+  participant P as Parent (/parent)
+  T->>A: getGameState() on launch
+  A->>DB: upsert Player, read Settings
+  A-->>T: player + settings (server wins unless unsynced local progress)
+  T->>A: saveProgress(state, events) ~2.5 s after a change / on background
+  A->>DB: update Player + insert GameEvents (one transaction)
+  P->>A: updateSettings() (password cookie checked server-side)
+  A->>DB: upsert Settings → applied on the tablet's next launch

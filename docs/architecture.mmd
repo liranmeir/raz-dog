@@ -1,0 +1,20 @@
+flowchart LR
+  subgraph Tablet["iPad (home-screen PWA)"]
+    UI["Game UI<br/>React + Framer Motion"]
+    Dog3D["3D puppy<br/>React Three Fiber"]
+    Echo["Voice echo<br/>Web Audio + VAD"]
+    Cache[("localStorage<br/>player + pending events")]
+    UI -->|mood, voice level| Dog3D
+    Echo -->|playback level| UI
+    UI <--> Cache
+  end
+  subgraph Vercel["Vercel · raz-dog.liranmeir.com"]
+    Actions["Server Actions<br/>game-actions / parent-actions"]
+    Gate["middleware + parent-guard<br/>SITE_PASSWORD (fails closed)"]
+  end
+  DB[("Neon Postgres<br/>Player · Settings · GameEvent")]
+  GH["GitHub liranmeir/raz-dog"]
+  UI <-->|saveProgress / getGameState| Actions
+  Gate --> Actions
+  Actions <-->|Prisma| DB
+  GH -->|push to main, tested build, deploy| Vercel
