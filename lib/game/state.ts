@@ -29,7 +29,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   speakNames: true,
   echoEnabled: true,
   sessionMinutes: 20,
-  dogStyle: '2d',
+  dogStyle: '3d',
 };
 
 export const playerStateSchema = z.object({

@@ -8,7 +8,7 @@ import type { DogStyle } from '@/lib/game/state';
 // three.js only loads when the 3D dog is actually chosen
 const Dog3D = dynamic(() => import('@/components/Dog3D'), { ssr: false });
 
-export const DogStyleContext = createContext<DogStyle>('2d');
+export const DogStyleContext = createContext<DogStyle>('3d');
 
 type Props = {
   mood: DogMood;

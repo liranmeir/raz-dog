@@ -45,7 +45,7 @@ export async function getGameState(): Promise<Result<{ player: PlayerState; sett
               speakNames: settings.speakNames,
               echoEnabled: settings.echoEnabled,
               sessionMinutes: settings.sessionMinutes,
-              dogStyle: settings.dogStyle === '3d' ? '3d' : '2d',
+              dogStyle: settings.dogStyle === '2d' ? '2d' : '3d',
             }
           : DEFAULT_SETTINGS,
       },
