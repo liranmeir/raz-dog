@@ -28,11 +28,71 @@ The **games are open** and need no login, because a 7-year-old shouldn't hit a p
 
 ## Architecture
 
+![Architecture](docs/architecture-logos.svg)
+
+<details>
+<summary>Detailed / editable version (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
-  T[Tablet browser / PWA] -->|server actions| N[Next.js on Vercel]
-  T -.->|localStorage cache + pending events| T
-  N -->|Prisma| DB[(Neon Postgres)]
+  subgraph Tablet["iPad (home-screen PWA)"]
+    UI["Game UI<br/>React + Framer Motion"]
+    Dog3D["3D puppy<br/>React Three Fiber"]
+    Echo["Voice echo<br/>Web Audio + VAD"]
+    Cache[("localStorage<br/>player + pending events")]
+    UI -->|mood, voice level| Dog3D
+    Echo -->|playback level| UI
+    UI <--> Cache
+  end
+  subgraph Vercel["Vercel · raz-dog.liranmeir.com"]
+    Actions["Server Actions<br/>game-actions / parent-actions"]
+    Gate["middleware + parent-guard<br/>SITE_PASSWORD (fails closed)"]
+  end
+  DB[("Neon Postgres<br/>Player · Settings · GameEvent")]
+  GH["GitHub liranmeir/raz-dog"]
+  UI <-->|saveProgress / getGameState| Actions
+  Gate --> Actions
+  Actions <-->|Prisma| DB
+  GH -->|push to main, tested build, deploy| Vercel
+```
+
+</details>
+
+### Key flows
+
+**Raz makes a sound → the dog repeats it** (all on-device, nothing leaves the tablet):
+
+```mermaid
+sequenceDiagram
+  participant R as Raz
+  participant M as Mic (Web Audio)
+  participant V as VAD (lib/audio/vad.ts)
+  participant D as Dog
+  participant S as Store (local-first)
+  R->>M: any vocal sound
+  M->>V: 2048-sample frames (RMS)
+  V-->>D: start → mood "listen" (ears up)
+  V-->>M: end (≥250 ms voiced)
+  M->>D: play clip at 1.5× → mood "talk", mouth follows level
+  D->>S: +1 ⭐ (max once per 4 s), log "vocalize"
+  S-->>S: cached instantly in localStorage
+```
+
+**Progress sync and parent settings:**
+
+```mermaid
+sequenceDiagram
+  participant T as Tablet
+  participant A as Server Actions
+  participant DB as Neon
+  participant P as Parent (/parent)
+  T->>A: getGameState() on launch
+  A->>DB: upsert Player, read Settings
+  A-->>T: player + settings (server wins unless unsynced local progress)
+  T->>A: saveProgress(state, events) ~2.5 s after a change / on background
+  A->>DB: update Player + insert GameEvents (one transaction)
+  P->>A: updateSettings() (password cookie checked server-side)
+  A->>DB: upsert Settings → applied on the tablet's next launch
 ```
 
 - **Local-first.** Every star or purchase is applied and cached on the device immediately, then synced in the background with `saveProgress`. The game never waits on the network. Unsynced events survive reloads.
